@@ -1,0 +1,402 @@
+---
+title: "SqueakR"
+output:
+  html_document:
+    toc: true
+    toc_float: true
+    df_print: paged
+    theme: darkly
+vignette: >
+  %\VignetteIndexEntry{SqueakR}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>",
+  fig.width = 5,
+  dpi=150
+)
+```
+
+# Introduction
+
+The SqueakR package is a centralized, experiment-centered approach to organizing and analyzing data exported from [`DeepSqueak`](https://github.com/DrCoffey/DeepSqueak). Of its diverse functions, SqueakR is capable of generating quick plots from vocalization data detected from `DeepSqueak`. On top of these visualizations, the package contains functions which combine all exported DeepSqueak data from multiple recordings into a single experimental object, allowing subsequent analysis to be conducted directly from R.
+
+# Installation
+
+## From GitHub
+
+To use SqueakR, we need to install the package. To install the package from GitHub, run the code below. Ensure the `devtools` package is installed before running the following:
+
+```{r install, eval=FALSE}
+library(devtools)
+install_github("osimon81/SqueakR")
+```
+
+Next, load the package:
+
+```{r setup}
+library(SqueakR)
+```
+
+# The Experimental Object
+
+## Creating an Experiment
+
+This package allows all data necessary for visualizations to be stored in a single object. However, to do so, the experimental object must be created. To create an `experiment`, run the following code:
+
+```{r create experiment}
+experiment <- create_experiment(experiment_name = "my_experiment")
+```
+
+This code creates a new `experiment` object, with the name `my_experiment`. When the object is saved, it will be saved using this name, along with a timestamp. At this point, there's nothing stored in this `experiment` object except its name, but let's inspect how `experiment` is structured:
+
+```{r experiment structure}
+str(experiment)
+```
+
+We can see from the `str()` function that the `experiment` object has 5 main groups listed in it:
+
+-   `name`: The name we just set for this experiment
+-   `last_saved`: A timestamp for the last time this experiment was saved (in this case, this is the time the object was created)
+-   `groups`: An empty variable which will be configured to show the experimental groups
+-   `experimenters`: An empty variable which will be configured to show the experimenters who collected data
+-   `experimental_data`: An empty list which will store all of the data for this experiment
+
+Now that our experiment is created, we can start to add data to it.
+
+## Loading Data
+
+When call data is exported from DeepSqueak, it includes all detected calls through the length of the recording. However, sometimes, we're only interested in calls within a certain range of the entire recording. SqueakR has the `add_timepoint_data()` function to assist with this:
+
+```{r add timepoint data}
+my_new_data <- add_timepoint_data(data_path = "../inst/extdata/Example_Mouse_Data.xlsx", t1 = 5, t2 = 25)
+```
+
+The parameters for `add_timepoint_data()` are defined as follows:
+
+-   `data_path`: The full path to the data file
+-   `t1`: The timepoint at which calls will start being extracted into the `my_new_data` object
+-   `t2`: The timepoint at which calls will stop being extracted into the object.
+
+In the context of the code above, we've just extracted all of the calls in the 5-25 second region. To view the data we've extracted to confirm this:
+
+```{r view head and tail of extracted data}
+# The first few rows of the dataset
+head(my_new_data)
+# The last few rows of the dataset
+tail(my_new_data)
+```
+
+If we inspect the `Begin Time (s)` column in the first table that generated above, you'll notice the first observation (row) represents a call that begins at \~5 seconds. Inspecting the `End Time (s)` column in the second table, the last call in the dataset ends at \~24 seconds, indicating that we've selected the 5-25 region for calls.
+
+## Scoring Data
+
+Once raw data is loaded into R, we can calculate some summary statistics on the region we've selected. To do this, run the following code:
+
+```{r scored data}
+my_scored_data <- score_timepoint_data(data_subset = my_new_data,
+                                    group = "Control",
+                                    experimenter = "my_name")
+str(my_scored_data)
+```
+
+### Data Structure {#data-structure}
+
+Since there is a lot of data contained in this object, here is a summary of the structure.
+
+The following variables are assigned to a single value:
+
+-   `group`: The experimental group specified in the score_timepoint_data() function.
+-   `experimenter`: The experimenter who collected the data
+-   `calls_n`: The number of detected calls in the following range
+
+The rest of these variables are extracted from the `my_new_data` object have sub-variables stored under them: mean, standard_deviation, and range:
+
+-   `call_length`
+
+-   `delta_frequency`
+
+-   `high_frequency`
+
+-   `low_frequency`
+
+-   `peak_frequency`
+
+-   `power`
+
+-   `principal_frequency`
+
+-   `sinuosity`
+
+-   `slope`
+
+-   `tonality`
+
+More information about the above variables can be found on the [DeepSqueak wiki](https://github.com/DrCoffey/DeepSqueak/wiki/export-to-excel). Finally, the raw variable contains the entire extracted dataset (the `my_new_data` object), which can be referenced when plotting the raw data.
+
+The data may appear complicated, but this will be useful later on to organize the data!
+
+## Adding Scored Data to Experiment
+
+Now our data is prepared, we can add it to the experiment object we created. To do so, we can use the `add_to_experiment()` function. The parameters for the function are the experiment object (which we've conveniently labeled experiment), and the data we want to add (which we just assigned to `my_scored_data` in the previous section).
+
+```{r adding data to experiment and update experiment}
+experiment <- add_to_experiment(experiment = experiment, added_data = my_scored_data)
+```
+
+## Summarizing the Experiment
+
+Now, our new data is added to our experiment object! As seen in the previous section, running `str(experiment)` can produce an unwieldy representation of our experiment, so this is discouraged when dealing with large experiments. As an alternative, we can run the following SqueakR function:
+
+```{r describe experiment}
+describe_experiment(experiment = experiment)
+```
+
+This can be a great way to inspect the contents of our experiment, and it condenses some of the parameters we set earlier. To clarify the last two lines of this output: Total call datapoints shows the total number of call data sheets stored in the experiment (i.e. how many scored datasets were added to the experiment in total), and "Data for Control" indicates how many of these datasets are part of this particular experimental group. In this way, the function allows us to get a feel for how much of our data is part of any given experimental group, to ensure the data are balanced.
+
+### Updating the Experiment
+
+The `add_to_experiment()` function runs another SqueakR function inside of it: `update_experiment()`. This function updates the "Experimenters" and "Experimental groups" fields within our `experiment` object to reflect the data which is stored in it. In other words, when we add data that specifies a different experimental group or a different experimenter, the Experimenters and Experimental groups will auto-populate.
+
+For complete documentation, the function is run below (however, since the experiment was already updated through the `add_to_experiment()` function, it will not change any values). It looks through the data stored in the experiment object, and searches for new groups or new experimenters. These new groups or experimenters are added to the `groups` and `experimenters` variables stored in the experiment object.
+
+```{r update experiment function}
+experiment <- update_experiment(experiment = experiment)
+```
+
+## Saving the Experiment
+
+Finally, in order to save your experiment to a given location, you can run the following function. Simply change the value assigned to save_path to the full path to the directory you want to save the experiment to.
+
+```{r save experiment, eval=FALSE, echo=FALSE}
+experiment <- save_experiment(experiment = experiment,
+                              save_path = "[put path here]")
+```
+
+The file will be saved as an RData file, with the name "[experiment name] ([current date]).RData"
+
+Note: The values in square brachets will populate differently, based on the name you set for the experiment (based on the Creating an Experiment section) and the current date. This saving convention ensures you never lose more than a day of progress if any mistakes are made.
+
+## Experimental Pipeline
+
+Usually, when there are many datasets present in an experiment, it can be unwieldy to switch between these various functions to create an experiment and add data to it. SqueakR has an interactive pipeline function which enables this, and it can be run using the following code:
+
+```{r testing pipeline, eval=FALSE, echo=FALSE}
+my_second_experiment <- experiment_pipeline()
+```
+
+The data can be easily added this way, since the user will be prompted for parameters like experimenter, group, etc for specific data. It can also be helpful to supply descriptive names for the excel files (which may include information about experimenter name, experimental group, time range to subset, etc) when they are made, in order to ensure no mistakes are made while entering these data.
+
+# Data Visualization
+
+## Overview
+
+The SqueakR package offers many tools for visualization of data, and these can be applied to the `experiment` object we created to inspect our data. This section of the document will go in detail for what each of these visualizations look like. In order to familiarize ourselves with the R syntax, and recap on the structure of the `experiment` object, we can retrieve the raw data from the data we just added to our experiment by running the following:
+
+```{r view raw data from experiment}
+experiment$experimental_data[1]$call_data$raw
+```
+
+### `$` Operator in SqueakR
+
+The `$` operator allows us to dive deeper in a list, and inspect values stored within that list. Using the code above, we access the raw data we put into the `experiment` by going from `experiment` -\> `experimental_data[1]` -\> `call_data` -\> `raw.` Specifying the number in square brackets (i.e. `experiment$experimental_data[1]`) will locate the first data added, specifying `experiment$experimental_data[2]` will located the second data, etc. Since we only added one dataset to the `experiment`, `experiment$experimental_data[1]` will lead us to that first set of data we added. From there, we navigate to `call_data` (which is a deliberately unremarkable variable in order to blind the user to the data stored inside it), and finally the `raw` data.
+
+Especially if you are new to R, this structure may appear complicated, but it allows our data to be much more organized and allows graphing to be more efficient. We'll use this structure when locating the data used to graph our visualizations.
+
+Note: For the following functions, the only required variable is the data_path variable, or the path towards our raw data. All other parameters (graph_title, graph_subtitle, etc) are optional, since there are default titles and descriptions prepared in SqueakR.
+
+## Ethnogram-Style Plots
+
+### Standard Ethnogram
+
+We can plot an ethnogram to reveal the occurance of a behavior (in our case, a call) over time, using the following function:
+
+```{r standard ethnogram, warning = FALSE}
+plotEthnogram(data_path = experiment$experimental_data[1]$call_data$raw)
+```
+
+We can also specify the graph title and subtitle, if we want to change them, by setting some optional parameters:
+
+```{r ethnogram with custom label}
+plotEthnogram(experiment$experimental_data[1]$call_data$raw,
+              graph_title = "My Ethnogram",
+              graph_subtitle = "This is the description I want instead!")
+```
+
+### Tonality Ethnogram (Split)
+
+We can plot the ethnogram, and split the lines up according to tonality, using the following code:
+
+```{r tonality ethnogram, warning = FALSE}
+plotEthnogramSplitByTonality(experiment$experimental_data[1]$call_data$raw,
+              graph_title = "My Tonality-Split Ethnogram")
+```
+
+## Density-Style Plots
+
+### Frequency Density Plot (Stacked)
+
+We can plot the frequency ranges of calls using the following function:
+
+```{r frequency stacked, warning = FALSE}
+plotDensityStackedByFrequency(experiment$experimental_data[1]$call_data$raw)
+```
+
+With *density graphs that are stacked*, we can highlight a specific group using the following optional parameter:
+
+```{r frequency stacked - choose group}
+plotDensityStackedByFrequency(experiment$experimental_data[1]$call_data$raw,
+                              chosen_group = 50)
+```
+
+### Frequency Density Plot (Split)
+
+Oftentimes, when there are too many groups stacked in the above graph, it can be more useful to either highlight the group of interest (as we did above), or split the graph according to frequency group, which can be done below:
+
+```{r frequency split, warning = FALSE}
+plotDensitySplitByFrequency(experiment$experimental_data[1]$call_data$raw)
+```
+
+### Custom Label Density Plot (Stacked)
+
+In DeepSqueak, we can label calls either manually, or using computer vision to assess calls based on the frequency regions in which they predominate, length, or shape of calls, among some other factors. These labels are exported from DeepSqueak along with the other call data, and as a result exist in our `experiment` object.
+
+*Note: Custom labels were arbitrarily set for the example data file, for sake of example.*
+
+Density plots can also be configured for these custom labels, as shown below:
+
+```{r custom stacked, warning = FALSE}
+plotDensityStackedByCustom(experiment$experimental_data[1]$call_data$raw)
+```
+
+### Custom Label Density Plot (Split)
+
+This density plot can also be split according to label:
+
+```{r custom split, warning = FALSE}
+plotDensitySplitByCustom(experiment$experimental_data[1]$call_data$raw)
+```
+
+### Duration Density Plot (Stacked)
+
+We can graph duration - call length using a similar stacked density plot, shown in the code below:
+
+```{r duration stacked, warning = FALSE}
+plotDensityStackedByDuration(experiment$experimental_data[1]$call_data$raw)
+```
+
+We can also split these duration groups:
+
+```{r duration split, warning = FALSE}
+plotDensitySplitByDuration(experiment$experimental_data[1]$call_data$raw)
+```
+
+## Histogram Plot
+
+We can plot a histogram representing the distribution of delta frequencies (the difference between the highest and lowest frequencies):
+
+```{r delta histogram, warning = FALSE}
+plotDeltaHistogram(experiment$experimental_data[1]$call_data$raw)
+```
+
+## Box Plot
+
+We can plot a box-plot distribution of labeled calls, organized by principal frequency (to get a sense of the frequencies where specific call types predominate) using the following code:
+
+```{r principal box-plot, warning = FALSE}
+plotPrincipalBoxplot(experiment$experimental_data[1]$call_data$raw)
+```
+
+## Correlation Plot
+
+Finally, we can plot a correlation matrix, which displays correlations between call features (listed in the [Data Structure section](#data-structure)), as well as correlation coefficients:
+
+```{r correlations, warning = FALSE}
+plotCorrelations(experiment$experimental_data[1]$call_data$raw)
+```
+## Preview Dataset Visualizations
+
+If you don't want to add data to the experiment object before visualizing data (in other words, preview the visualizations for an Excel file), you can run the same functions as above:
+
+```{r preview excel file (1)}
+plotDensityStackedByFrequency("../inst/extdata/Example_Mouse_Data.xlsx")
+```
+Keep in mind these plots will generate for the entire set of data, not a subset of the data like we can do using the experiment object functions. The only parameter required for these visualizations is the full path to the data file, which makes it easy to produce rapid visualizations based on individual Excel files.
+
+If we want to view an entire set of visualizations (shown in the above sections) for an Excel file as a PDF, we can also run the following function:
+
+```{r preview excel file (2), warning=FALSE}
+plotSummaryPDF("../inst/extdata/Example_Mouse_Data.xlsx", save_path = tempdir())
+```
+
+
+# Data Analysis
+
+## Replicating analysis
+
+In order to replicate analysis, let's add another file to our experiment by running the following function:
+
+```{r adding new data}
+additional_data <- add_timepoint_data(data_path = "../inst/extdata/Example_Mouse_Data.xlsx", t1 = 30, t2 = 50)
+
+additional_data <- score_timepoint_data(data_subset = additional_data, group = "Drug",
+                                        experimenter = "new_experimenter")
+
+experiment <- add_to_experiment(experiment = experiment, added_data = additional_data)
+
+```
+
+
+From this code, a different range of time (30-50 seconds) was subset from the same data file, so different calls were extracted. Just to get a sense of what the `experiment` object looks like after adding these data:
+
+```{r inspecting experiment object for two groups}
+describe_experiment(experiment)
+```
+
+As mentioned earlier when we first ran this function, we can now see how many datasets are stored under each condition. You'll also notice that the "Experimenters" and "Experimental groups" field has auto-populated, based on the parameters for the new data we just added.
+
+Let's try adding one more experimental group and looking at the `experiment` object now:
+
+
+```{r adding one last group}
+third_dataset <- add_timepoint_data(data_path = "../inst/extdata/Example_Mouse_Data.xlsx", t1 = 70, t2 = 90)
+third_dataset <- score_timepoint_data(data_subset = third_dataset, group = "Sham",
+                                      experimenter = "experimenter_3")
+
+experiment <- add_to_experiment(experiment = experiment, added_data = third_dataset)
+
+```
+
+Here, we've picked a new range within the same file and added this information to our dataset. If we inspect the `experiment` object again, we'll see the same fields as last time auto-populate:
+
+```{r inspecting experiment for three groups}
+describe_experiment(experiment)
+```
+
+## Inter-group comparison
+
+Once we've finished adding all of our data to the `experiment` object, we can start comparing metrics between groups. To do this, it will be useful to revisit the structure `experiment` object.
+
+Within the experiment object is a list called experimental_data, which contains all our data (processed and raw) for each time range we select. Under the call_data for any given object lie the metrics we can compare (call_length, delta_frequency, high_frequency, low_frequency, peak_frequency, power, principal_frequency, sinuosity, slope, and tonality). The way these variables are written in the experiment object (i.e. lowercase with underscores between words) will be the same way it will be entered into the following function to generate comparisons between groups:
+
+```{r analyze delta frequency between groups}
+analyze_factor(experiment = experiment, analysis_factor = "delta_frequency")
+```
+
+In the above plot, we compare delta frequency (the average range of frequencies for all calls in a given time range) between different groups. The data look similar because they are based on the same Excel file, just at different time-points, but this highlights the versatility of data extraction using DeepSqueak, in that call data can be processed in not only a between-groups manner but also a within-groups manner.
+
+We can assess other comparisons in this way, by ensuring that we set the `analysis_factor` variable to the name of the columns previously specified in "quotes." Keeping this format ensures that SqueakR knows which data to compare.
+
+
+
+
+
+
+
+
+
+

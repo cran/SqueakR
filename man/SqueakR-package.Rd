@@ -4,14 +4,15 @@
 \name{SqueakR-package}
 \alias{SqueakR}
 \alias{SqueakR-package}
-\title{SqueakR: An Experiment Superstructure for 'DeepSqueak'}
+\title{SqueakR: An Experiment Interface for 'DeepSqueak' Bioacoustics Research}
 \description{
-A collection of functions intended to produce convenient visualizations for rodent vocalizations exported from 'DeepSqueak'. These visualizations include call frequency-clustered graphs, and density graphs grouped by frequency, custom labels identified in 'DeepSqueak', and call duration.
+Data processing and visualizations for rodent vocalizations exported from 'DeepSqueak'. These functions are compatible with the 'SqueakR' Shiny Dashboard, which can be used to visualize experimental results and analyses.
 }
 \seealso{
 Useful links:
 \itemize{
-  \item \url{https://github.com/osimon81/SqueakR}
+  \item \url{https://osimon81.github.io/SqueakR/}
+  \item \url{https://github.com/osimon81/SqueakR/}
 }
 
 }

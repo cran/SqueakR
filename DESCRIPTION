@@ -1,19 +1,19 @@
 Type: Package
 Package: SqueakR
-Title: An Experiment Superstructure for 'DeepSqueak'
-Version: 1.0.0
+Title: An Experiment Interface for 'DeepSqueak' Bioacoustics Research
+Version: 1.2.5
 Authors@R: 
     person("Simon", "Ogundare", , "simon.ogundare@columbia.edu", role = c("aut", "cre"),
            comment = c(ORCID = "0000-0002-6243-2779"))
-Description: A collection of functions intended to produce convenient
-    visualizations for rodent vocalizations exported from 'DeepSqueak'.
-    These visualizations include call frequency-clustered graphs, and
-    density graphs grouped by frequency, custom labels identified in
-    'DeepSqueak', and call duration.
-URL: https://github.com/osimon81/SqueakR
+Description: Data processing and visualizations for rodent vocalizations exported from
+    'DeepSqueak'. These functions are compatible with the 'SqueakR' Shiny Dashboard,
+    which can be used to visualize experimental results and analyses.
+URL: https://osimon81.github.io/SqueakR/,
+        https://github.com/osimon81/SqueakR/
 License: MIT + file LICENSE
 Imports: dplyr, ggcorrplot, ggeasy, gghighlight, ggplot2, ggpubr,
-        readxl, rlist
+        googlesheets4, readxl, rlist, rstatix, shiny, shinydashboard,
+        utils
 Suggests: knitr, rmarkdown, testthat (>= 3.0.0)
 VignetteBuilder: knitr
 Encoding: UTF-8
@@ -22,8 +22,8 @@ LazyData: no
 Depends: R (>= 2.10)
 Config/testthat/edition: 3
 NeedsCompilation: no
-Packaged: 2022-06-16 04:13:29 UTC; Simon
+Packaged: 2022-06-21 16:30:24 UTC; Simon
 Author: Simon Ogundare [aut, cre] (<https://orcid.org/0000-0002-6243-2779>)
 Maintainer: Simon Ogundare <simon.ogundare@columbia.edu>
 Repository: CRAN
-Date/Publication: 2022-06-17 07:20:02 UTC
+Date/Publication: 2022-06-22 08:20:20 UTC

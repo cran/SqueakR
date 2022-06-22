@@ -6,12 +6,16 @@ knitr::opts_chunk$set(
   dpi=150
 )
 
-## ----install, eval=FALSE------------------------------------------------------
+## ----install from CRAN, eval=FALSE--------------------------------------------
+#  install.packages("SqueakR")
+
+## ----loading SqueakR----------------------------------------------------------
+library(SqueakR)
+
+## ----install from GitHub, eval = FALSE----------------------------------------
 #  library(devtools)
 #  install_github("osimon81/SqueakR")
-
-## ----setup--------------------------------------------------------------------
-library(SqueakR)
+#  library(SqueakR)
 
 ## ----create experiment--------------------------------------------------------
 experiment <- create_experiment(experiment_name = "my_experiment")
@@ -37,6 +41,9 @@ str(my_scored_data)
 ## ----adding data to experiment and update experiment--------------------------
 experiment <- add_to_experiment(experiment = experiment, added_data = my_scored_data)
 
+## ----removing data from experiment, eval=FALSE--------------------------------
+#  experiment <- remove_experiment_data(experiment, data_id = 1)
+
 ## ----describe experiment------------------------------------------------------
 describe_experiment(experiment = experiment)
 
@@ -47,8 +54,11 @@ experiment <- update_experiment(experiment = experiment)
 #  experiment <- save_experiment(experiment = experiment,
 #                                save_path = "[put path here]")
 
-## ----testing pipeline, eval=FALSE, echo=FALSE---------------------------------
-#  my_second_experiment <- experiment_pipeline()
+## ----semi-automatic pipeline, eval=FALSE, echo=FALSE--------------------------
+#  my_semi_automaticaly_loaded_experiment <- semisqueakRpipeline()
+
+## ----automatic pipeline, eval = FALSE, echo = FALSE---------------------------
+#  my_automatically_loaded_experiment <- autosqueakRpipeline()
 
 ## ----view raw data from experiment--------------------------------------------
 experiment$experimental_data[1]$call_data$raw
@@ -68,7 +78,7 @@ plotEthnogramSplitByTonality(experiment$experimental_data[1]$call_data$raw,
 ## ----frequency stacked, warning = FALSE---------------------------------------
 plotDensityStackedByFrequency(experiment$experimental_data[1]$call_data$raw)
 
-## ----frequency stacked - choose group-----------------------------------------
+## ----frequency stacked - choose group, warning = FALSE------------------------
 plotDensityStackedByFrequency(experiment$experimental_data[1]$call_data$raw,
                               chosen_group = 50)
 
@@ -127,4 +137,13 @@ describe_experiment(experiment)
 
 ## ----analyze delta frequency between groups-----------------------------------
 analyze_factor(experiment = experiment, analysis_factor = "delta_frequency")
+
+## ----anova for delta-frequency------------------------------------------------
+squeakrANOVA(experiment = experiment, analysis_factor = "Delta_Freq")
+
+## ----anova for call length----------------------------------------------------
+squeakrANOVA(experiment = experiment, analysis_factor = "Call_Length")
+
+## ----SqueakR dashboard, eval = FALSE------------------------------------------
+#  squeakRDashboard()
 

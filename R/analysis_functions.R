@@ -1,6 +1,6 @@
 data(deepsqueak_data, envir=environment())
 
-globalVariables(c("group", "sd"))
+globalVariables(c("group", "sd", "index"))
 
 #' @title Analyze Factor
 #'
@@ -80,8 +80,6 @@ analyze_factor <- function(experiment, analysis_factor) {
   stderr <- stdevs / sqrt(ns)
 
 
-
-
   df <- as.data.frame(rbind(means, stdevs))
   df <- as.data.frame(lapply(df, unlist))
 
@@ -98,10 +96,55 @@ analyze_factor <- function(experiment, analysis_factor) {
     ), position = position_dodge(width = 0.9), vjust = -0.5) +
     xlab("Group") +
     ylab("Mean value") +
-    ggtitle("Quickplot: Comparison between groups") +
+    ggtitle("Comparison between groups") +
     scale_fill_hue(name = "Group") +
     labs(
       caption = ("Error bars represent the mean +/- 2 standard errors."),
       subtitle = paste0("Factor being compared: ", analysis_factor)
     )
 }
+
+
+#' @title Generate ANOVA tables for Detected Calls
+#'
+#' @description Aggregates raw data tables for all data added to experiment object,
+#' and calculates and displays ANOVA statistics.
+#'
+#' @param experiment The experiment object
+#' @param analysis_factor A string representing the factor to analyze between groups
+#'
+#' @return A bar graph comparing the analysis_factor between groups
+#'
+#' @examples \dontrun{squeakrANOVA(experiment = experiment, analysis_factor = "Delta_Freq")}
+#'
+#' @import dplyr
+#' @import rlist
+#' @importFrom rstatix anova_test get_anova_table
+#' @export
+squeakrANOVA <- function(experiment, analysis_factor) {
+  group_organized <- list.group(experiment$experimental_data, group)
+
+  combined_df <- data.frame(matrix(ncol = ncol(experiment$experimental_data[1]$call_data$raw), nrow = 0))
+
+  for (selected_group in 1:length(names(group_organized))) {
+    for (dataset in 1:length(group_organized[[selected_group]])) {
+      set_to_add <- group_organized[[selected_group]][dataset]$call_data$raw %>%
+        mutate(group = names(group_organized)[selected_group])
+      combined_df <- rbind(combined_df, set_to_add)
+    }
+  }
+
+  combined_df <- combined_df %>%
+    mutate(index = 1:nrow(combined_df))
+  colnames(combined_df) <- trimws(gsub(r"{\s*\([^\)]+\)}","", as.character(names(combined_df))))
+  colnames(combined_df) <- gsub(" ", "_", names(combined_df), fixed = TRUE)
+  res.aov <- anova_test(data = combined_df, dv = analysis_factor, wid = index, between = group)
+  return(get_anova_table(res.aov))
+}
+
+
+
+
+
+
+

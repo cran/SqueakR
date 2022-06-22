@@ -236,10 +236,10 @@ save_experiment <- function(experiment, save_path) {
 #'
 #' @export
 describe_experiment <- function(experiment) {
-  message("Experimental name: ", experiment$name)
+  message("Experiment name: ", experiment$name)
   message("Last saved: ", as.character(experiment$last_saved))
-  message("Experimenters: ", paste(experiment$experimenters, collapse = ", "))
-  message("Experimental groups: ", paste(experiment$groups, collapse = ", "))
+  message("Experimenter(s): ", paste(experiment$experimenters, collapse = ", "))
+  message("Experimental group(s): ", paste(experiment$groups, collapse = ", "))
   message("Total call datapoints: ", as.character(length(experiment$experimental_data)))
   for (this_group in experiment$groups) {
     group_count <- 0
@@ -250,4 +250,24 @@ describe_experiment <- function(experiment) {
     }
     message("Data for ", this_group, ": ", as.character(group_count))
   }
+}
+
+#' @title Remove Data from Experiment File
+#'
+#' @description Removes the data object of interest from the experiment according to
+#' a data_id. Removing the data with data_id = 12 removes the 12th dataset added to
+#' the experiment.
+#'
+#' @param experiment The experiment object
+#' @param data_id The number of the data file to be removed
+#'
+#' @return The experiment file, with the rejected call data removed.
+#'
+#' @examples \dontrun{experiment <- remove_experiment_data(experiment = experiment_object, data_id = 12)}
+#'
+#' @export
+remove_experiment_data <- function(experiment, data_id) {
+  experiment$experimental_data <- experiment$experimental_data[-as.numeric(data_id)]
+  experiment <- update_experiment(experiment)
+  return(experiment)
 }

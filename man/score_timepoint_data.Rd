@@ -4,12 +4,16 @@
 \alias{score_timepoint_data}
 \title{Score Timepoint Data}
 \usage{
-score_timepoint_data(data_subset, group, experimenter)
+score_timepoint_data(data_subset, group, animal, id, experimenter)
 }
 \arguments{
 \item{data_subset}{The object created in `add_timepoint_data()` which will be scored}
 
 \item{group}{The experimental group (i.e. "Control") these data correspond to}
+
+\item{animal}{The animal or animal group ID for these data}
+
+\item{id}{The full name of the experiment, including the extension.}
 
 \item{experimenter}{The experimenter who recorded these results}
 }
@@ -22,7 +26,7 @@ Transforms data into a list of mean, standard deviation, and range of several ca
 \examples{
 \dontrun{score_timepoint_data(
   data_subset = my_subsetted_data, group = "Control",
-  experimenter = "Experimenter 1"
+  experimenter = "Experimenter 1", animal = "4207", id = "Data_sheet.xlsx"
 )}
 
 }

@@ -9,7 +9,11 @@
 #'
 #' @import shiny
 #' @import shinydashboard
-#' @importFrom utils object.size
+#' @importFrom plotly plotlyOutput renderPlotly
+#' @import RColorBrewer
+#' @import report
+#' @import rlist
+#' @importFrom utils object.size capture.output
 #' @export
 squeakRDashboard <- function() {
 
@@ -18,12 +22,16 @@ ui <- dashboardPage(
   dashboardSidebar(
     sidebarMenu(
       menuItem("Home", tabName = "main"),
-      menuItem("Data Tables", tabName = "data_tables"),
+      menuItem("Descriptive Statistics", tabName = "desc_stats"),
+      menuItem("Metadata Distribution Plots", tabName = "meta_dist"),
       menuItem("Ethnogram Plots", tabName = "ethnograms"),
       menuItem("Density Plots", tabName = "densities"),
       menuItem("Supplemental Plots", tabName = "misc_graphs"),
-      menuItem("Plot Differences", tabName = "compare_groups"),
-      menuItem("ANOVA", tabName = "anova_groups"),
+      menuItem("Data Tables", tabName = "data_tables"),
+      menuItem("Cluster Plots", tabName = "spa_clus"),
+      menuItem("Surface Plots", tabName = "spa_surf"),
+      menuItem("Group Difference Plots", tabName = "compare_groups"),
+      menuItem("ANOVA Table", tabName = "anova_groups"),
       div(img(imageOutput("package_image")), style="text-align: center;")
     )
   ),
@@ -50,6 +58,20 @@ ui <- dashboardPage(
               tags$a(href="https://osimon81.github.io/SqueakR", "Click here to learn more about the SqueakR package.")
       ),
 
+      tabItem(tabName = "meta_dist",
+              h2("Metadata Distribution"),
+              fluidRow(
+                box(
+                  title = "Sunburst plots with animal distribution (left) and experimenter distribution (right) across groups",
+                  width = 12),
+                box(
+                    column(
+                    plotlyOutput("ani_dist"), width = 6),
+                    column(
+                      plotlyOutput("expt_dist"), width = 6), width = 12)
+                ),
+      ),
+
       tabItem(tabName = "data_tables",
               h2("Data Tables"),
               fluidRow(
@@ -64,6 +86,38 @@ ui <- dashboardPage(
               fluidRow(
                 div(style = 'overflow-x: scroll', tableOutput("table"))
               )
+      ),
+
+      tabItem(tabName = "spa_clus",
+              h2("3D-Plotted Call Clusters"),
+              fluidRow(
+                box(
+                  selectInput('pickdata_cluster',
+                              label = "Data point to be graphed:",
+                              choices = c("Load an experiment first."),
+                              selected = 1))
+              ),
+              fluidRow(
+                plotlyOutput('cluster_plot', height = "600px")
+              )
+      ),
+
+      tabItem(tabName = "spa_surf",
+              h2("Call Surface Plots (Contour & Surface)"),
+              fluidRow(
+                box(
+                  selectInput('pickdata_surface',
+                              label = "Data point to be graphed:",
+                              choices = c("Load an experiment first."),
+                              selected = 1))
+              ),
+              fluidRow(
+                plotlyOutput('contour_plot', height = "600px")
+              ),
+              fluidRow(
+                plotlyOutput('surface_plot', height = "600px")
+              )
+
       ),
 
       tabItem(tabName = "ethnograms",
@@ -140,6 +194,19 @@ ui <- dashboardPage(
                 box(plotOutput("compare_groups", width = "100%"), width = 12)
               )
       ),
+      tabItem(tabName = "desc_stats",
+              h2("Descriptive Statistics for Experiment"),
+              fluidRow(
+                box(
+                  title = "Summary statistics for experiment, grouped by experimental group:"),
+                width = 12
+              ),
+              fluidRow(
+                box(
+                  shiny::htmlOutput("summary_stats"), width = 12
+                )
+              )
+      ),
       tabItem(tabName = "anova_groups",
               h2("Analysis of Variance (ANOVA)"),
               fluidRow(
@@ -158,7 +225,7 @@ ui <- dashboardPage(
                   )
                 )
       )
-    )
+      )
   )
 )
 
@@ -212,6 +279,18 @@ server <- function(input, output, session) {
       infoBox("Experiment Size", format(object.size(experiment), units = "auto"), icon = icon("desktop"), fill = FALSE, color = "yellow")
     })
 
+    # Metadata Distributions
+
+    output$ani_dist <- renderPlotly({
+      data <- plotSunburstAnimals(experiment)
+      data
+    })
+
+    output$expt_dist <- renderPlotly({
+      data <- plotSunburstExperimenters(experiment)
+      data
+    })
+
     # Select inputs
 
     updateSelectInput(session, "pickdata_tab", choices = c(1:length(experiment$experimental_data)), selected = 1)
@@ -230,6 +309,26 @@ server <- function(input, output, session) {
     these_names <- gsub(" ", "_", these_names, fixed = TRUE)
 
     updateSelectInput(session, "pickdata_anova", choices = these_names, selected = 1)
+    updateSelectInput(session, "pickdata_cluster", choices = c(1:length(experiment$experimental_data)), selected = 1)
+    updateSelectInput(session, "pickdata_surface", choices = c(1:length(experiment$experimental_data)), selected = 1)
+
+    # 3D Plots
+
+    output$cluster_plot <- renderPlotly({
+      data <- plotClusters(experiment$experimental_data[as.numeric(input$pickdata_cluster)]$call_data$raw)
+      data
+    })
+
+    output$surface_plot <- renderPlotly({
+      data <- plotSurface(experiment$experimental_data[as.numeric(input$pickdata_surface)]$call_data$raw)
+      data
+    })
+
+    output$contour_plot <- renderPlotly({
+      data <- plotContours(experiment$experimental_data[as.numeric(input$pickdata_surface)]$call_data$raw)
+      data
+    })
+
 
     # Data Tables
 
@@ -297,6 +396,17 @@ server <- function(input, output, session) {
 
     output$anova_groups <- shiny::renderDataTable({
       squeakrANOVA(experiment = experiment, analysis_factor = input$pickdata_anova)
+    })
+
+    # Summary statistics
+
+    output$summary_stats <- shiny::renderUI({
+      HTML(
+        paste(
+          c("<pre>", capture.output(print(squeakrSummary(experiment = experiment))), "</pre>"),
+          collapse = "<br>"
+        )
+      )
     })
 
   })

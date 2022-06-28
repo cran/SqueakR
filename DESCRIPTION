@@ -1,7 +1,7 @@
 Type: Package
 Package: SqueakR
 Title: An Experiment Interface for 'DeepSqueak' Bioacoustics Research
-Version: 1.2.5
+Version: 1.3.0
 Authors@R: 
     person("Simon", "Ogundare", , "simon.ogundare@columbia.edu", role = c("aut", "cre"),
            comment = c(ORCID = "0000-0002-6243-2779"))
@@ -12,8 +12,8 @@ URL: https://osimon81.github.io/SqueakR/,
         https://github.com/osimon81/SqueakR/
 License: MIT + file LICENSE
 Imports: dplyr, ggcorrplot, ggeasy, gghighlight, ggplot2, ggpubr,
-        googlesheets4, readxl, rlist, rstatix, shiny, shinydashboard,
-        utils
+        googlesheets4, MASS, plotly, RColorBrewer, readxl, report,
+        rlist, rstatix, shiny, shinydashboard, utils
 Suggests: knitr, rmarkdown, testthat (>= 3.0.0)
 VignetteBuilder: knitr
 Encoding: UTF-8
@@ -22,8 +22,8 @@ LazyData: no
 Depends: R (>= 2.10)
 Config/testthat/edition: 3
 NeedsCompilation: no
-Packaged: 2022-06-21 16:30:24 UTC; Simon
+Packaged: 2022-06-25 02:20:28 UTC; Simon
 Author: Simon Ogundare [aut, cre] (<https://orcid.org/0000-0002-6243-2779>)
 Maintainer: Simon Ogundare <simon.ogundare@columbia.edu>
 Repository: CRAN
-Date/Publication: 2022-06-22 08:20:20 UTC
+Date/Publication: 2022-06-28 09:20:04 UTC

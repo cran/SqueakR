@@ -44,21 +44,25 @@ add_timepoint_data <- function(data_path, t1 = "", t2 = "") {
 #'
 #' @param data_subset The object created in `add_timepoint_data()` which will be scored
 #' @param group The experimental group (i.e. "Control") these data correspond to
+#' @param id The full name of the experiment, including the extension.
+#' @param animal The animal or animal group ID for these data
 #' @param experimenter The experimenter who recorded these results
 #'
 #' @return A list object containing statistics and metadata for each file.
 #'
 #' @examples \dontrun{score_timepoint_data(
 #'   data_subset = my_subsetted_data, group = "Control",
-#'   experimenter = "Experimenter 1"
+#'   experimenter = "Experimenter 1", animal = "4207", id = "Data_sheet.xlsx"
 #' )}
 #'
 #' @import readxl
 #' @import dplyr
 #' @export
-score_timepoint_data <- function(data_subset, group, experimenter) {
+score_timepoint_data <- function(data_subset, group, animal, id, experimenter) {
   message("Summarizing call features for datapoint...")
   timepoint_metrics <- list(
+    id = id,
+    animal = animal,
     group = group,
     experimenter = experimenter,
     calls_n = count(data_subset)[[1]],
@@ -141,6 +145,7 @@ create_experiment <- function(experiment_name) {
     name = experiment_name,
     last_saved = Sys.time(),
     groups = c(),
+    animals = c(),
     experimenters = c(),
     experimental_data = list()
   )
@@ -173,13 +178,13 @@ add_to_experiment <- function(experiment, added_data) {
 
 #' @title Updates Experiment Object Metadata
 #'
-#' @description Auto-populates `groups` and `experimenters` fields in experiment object
+#' @description Auto-populates `groups`, `experimenters`, and `animals` fields in experiment object
 #' by checking experimental data (within the experiment object) for new data.
 #'
 #' @param experiment The experiment object
 #'
 #' @return A list object containing statistics and metadata for the entire experiment.
-#' The `groups` and `experimenters` field will auto-populate based on added data using
+#' The `groups`, `experimenters`, and `animals` fields will auto-populate based on added data using
 #' the `update_experiment()` function.
 #'
 #' @examples \dontrun{update_experiment(experiment)}
@@ -189,6 +194,7 @@ update_experiment <- function(experiment) {
   message("Updating experiment metadata...")
   extracted_groups <- c()
   extracted_experimenters <- c()
+  extracted_animals <- c()
 
   for (i in 1:length(experiment$experimental_data)) {
     extracted_groups <- append(extracted_groups, experiment$experimental_data[i]$call_data$group)
@@ -198,8 +204,13 @@ update_experiment <- function(experiment) {
     extracted_experimenters <- append(extracted_experimenters, experiment$experimental_data[i]$call_data$experimenter)
   }
 
+  for (i in 1:length(experiment$experimental_data)) {
+    extracted_animals <- append(extracted_animals, experiment$experimental_data[i]$call_data$animal)
+  }
+
   experiment$groups <- unique(extracted_groups)
   experiment$experimenters <- unique(extracted_experimenters)
+  experiment$animals <- unique(extracted_animals)
   return(experiment)
 }
 
@@ -239,8 +250,9 @@ describe_experiment <- function(experiment) {
   message("Experiment name: ", experiment$name)
   message("Last saved: ", as.character(experiment$last_saved))
   message("Experimenter(s): ", paste(experiment$experimenters, collapse = ", "))
+  message("Animal(s): ", paste(experiment$animals, collapse = ", "))
   message("Experimental group(s): ", paste(experiment$groups, collapse = ", "))
-  message("Total call datapoints: ", as.character(length(experiment$experimental_data)))
+  message("Total call datasets: ", as.character(length(experiment$experimental_data)))
   for (this_group in experiment$groups) {
     group_count <- 0
     for (i in 1:length(experiment$experimental_data)) {
@@ -271,3 +283,68 @@ remove_experiment_data <- function(experiment, data_id) {
   experiment <- update_experiment(experiment)
   return(experiment)
 }
+
+
+#' @title Decode Experiment IDs
+#'
+#' @description Creates a vector of the original call file names, indexed
+#' by the order they are listed in the experiment. This allows experimenters
+#' to unblind themselves to the data they collect
+#'
+#' @param experiment The experiment object
+#'
+#' @return A vector representing the original call file names
+#'
+#' @examples \dontrun{decode_experiment_ids(experiment)}
+#'
+#' @export
+unblind_all_ids <- function(experiment) {
+  decode_vector <- c()
+  for (dataset in 1:length(experiment$experimental_data)) {
+    decode_vector <- c(decode_vector, experiment$experimental_data[dataset]$call_data$id)
+  }
+  return(decode_vector)
+}
+
+
+#' @title Find Matching Experiment ID
+#'
+#' @description Finds the index of a dataset matching a supplied file name
+#' in the experiment.
+#'
+#' @param experiment The experiment object
+#' @param filename The full name of the file, including the extension
+#'
+#' @return A number or numbers representing index or indices where that file
+#' appears in the experiment
+#'
+#' @examples \dontrun{unblind_data_id(experiment, "my_data1.xlsx")}
+#'
+#' @export
+unblind_data_id <- function(experiment, filename) {
+  expt_ids <- unblind_all_ids(experiment)
+  index <- which(expt_ids == filename)
+  return(index)
+}
+
+
+#' @title Find Matching Experiment Name
+#'
+#' @description Finds the name of a dataset matching a supplied index in the set of data
+#'
+#' @param experiment The experiment object
+#' @param id The dataset number to be unblinded
+#'
+#' @return The name of the original file, corresponding to the data at
+#' the requested index
+#'
+#' @examples \dontrun{unblind_data_name(experiment, 2)}
+#'
+#' @export
+unblind_data_name <- function(experiment, id) {
+  expt_ids <- unblind_all_ids(experiment)
+  name <- expt_ids[as.numeric(id)]
+  return(name)
+}
+
+

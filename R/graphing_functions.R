@@ -26,6 +26,35 @@ loadSpecData <- function(data_path) {
   return(excel_file)
 }
 
+#' Counts number of datasets of a particular group
+#' @param experiment The experiment object
+#' @param group The group to be searched for
+#' @keywords internal
+#' @noRd
+count_group_values <- function(experiment, group) {
+  n <- 0
+  for (dataset in 1:length(experiment$experimental_data)) {
+    if (experiment$experimental_data[dataset]$call_data$group == group) {
+      n <- n + 1
+    }
+  }
+  return(n)
+}
+
+#' Counts number of datasets done by a particular experimenter
+#' @param experiment The experiment object
+#' @param experimenter The experiment to be searched for
+#' @keywords internal
+#' @noRd
+count_exptr_values <- function(experiment, experimenter) {
+  n <- 0
+  for (dataset in 1:length(experiment$experimental_data)) {
+    if (experiment$experimental_data[dataset]$call_data$experimenter == experimenter) {
+      n <- n + 1
+    }
+  }
+  return(n)
+}
 
 ######### User Functions #########
 
@@ -561,3 +590,194 @@ plotCorrelations <- function(data_path,
       caption = paste0("n = ", count(excel_file)[1], " observed calls.")
     )
 }
+
+#### 2D Renderings of 3D Graphs ####
+
+#' @title 2D Call Contours
+#'
+#' @description Plots call density against principal frequency and call
+#' length as a contoured heatmap. Histograms for these variables are
+#' displayed across their respective axes.
+#'
+#' @param data_path The path to the raw data
+#'
+#' @return 2D contour plot
+#'
+#' @examples \dontrun{plotContours(data_path = "path")}
+#'
+#' @importFrom plotly plot_ly plotly_empty layout subplot
+#' @export
+plotContours <- function(data_path) {
+  x <- data_path$`Principal Frequency (kHz)`
+  y <- data_path$`Call Length (s)`
+  s <- subplot(
+    plot_ly(x = x, type = "histogram"),
+    plotly_empty(type = 'scatter',
+                 mode='markers'),
+    plot_ly(x = x, y = y, type = "histogram2dcontour"),
+    plot_ly(y = y, type = "histogram"),
+    nrows = 2, heights = c(0.2, 0.8), widths = c(0.8, 0.2), margin = 0,
+    shareX = TRUE, shareY = TRUE, titleX = FALSE, titleY = FALSE
+  )
+  fig <- layout(s, showlegend = FALSE, title = "2D Contour Plot of Principal Frequency (x) against Call Length (y)")
+
+  fig
+}
+
+#### 3D Graphs ####
+
+#' @title 3D Call Clusters (Custom Label) Plot
+#'
+#' @description Plots call clusters within a data-point in a 3D Plotly graph, with
+#' principal frequency on the x-axis, mean power on the y-axis, and call length on
+#' the z-axis.
+#'
+#' @param data_path The path to the raw data
+#'
+#' @return 3D scatterplot
+#'
+#' @examples \dontrun{plotClusters(data_path = "path")}
+#'
+#' @importFrom plotly plot_ly add_markers add_lines layout
+#' @import RColorBrewer
+#' @export
+plotClusters <- function(data_path) {
+  nb.cols <- length(unique(data_path$Label))
+
+  plot_ly(data_path,
+          x = ~`Principal Frequency (kHz)`,
+          y = ~`Mean Power (dB/Hz)`,
+          z = ~`Call Length (s)`,
+          color = ~`Label`, colors = colorRampPalette(brewer.pal(8, "Set2"))(nb.cols)) %>%
+    add_markers() %>%
+    add_lines(showlegend = FALSE) %>%
+    layout(
+      scene = list(
+        xaxis = list(title = "Principal Frequency (kHz)"),
+        yaxis = list(title = "Mean Power (dB/Hz)"),
+        zaxis = list(title = "Call Length (s)")
+      )
+    )
+}
+
+#' @title 3D Surface Plot for Call Datasets
+#'
+#' @description Plots interactive 3D plot for density of detected calls
+#' against call length (s) and principal frequency (kHz), using bivariate
+#' kernel density estimation provided via the MASS package
+#'
+#' @param data_path The path to the call data
+#' @param res The resolution to render surface plot (default is 60)
+#'
+#' @return 3D surface plot for the selected call dataset
+#'
+#' @examples \dontrun{plotSurface(data_path = "path")}
+#'
+#' @importFrom plotly plot_ly add_surface
+#' @importFrom MASS kde2d
+#' @export
+plotSurface <- function(data_path, res = 60) {
+  kd <- kde2d(data_path$`Principal Frequency (kHz)`,
+              data_path$`Call Length (s)`,
+              n = res)
+
+  plot_ly(data_path) %>% add_surface(x = ~kd$x, y = ~kd$y, z = ~kd$z, showscale = TRUE) %>%
+    layout(title = "Surface Plot of Call Dataset", scene = list(xaxis = list(title = "Principal Frequency (kHz)"),
+                                                                yaxis = list(title = "Call Length (s)"),
+                                                                zaxis = list(title = "Density")))
+}
+
+#### Sunburst Graphs ####
+
+#' @title Sunburst Plot for Animal Distribution
+#'
+#' @description Plots interactive sunburst plot for animal distribution across
+#' experimental groups. Currently only valid for between-groups studies.
+#'
+#' @param experiment The experiment object
+#'
+#' @return Sunburst distribution plotting animal distribution
+#'
+#' @examples \dontrun{plotSunburstAnimals(experiment = experiment)}
+#'
+#' @importFrom plotly plot_ly
+#' @export
+plotSunburstAnimals <- function(experiment) {
+  labels <- c()
+  parents <- c()
+  values <- c()
+
+  for (group in experiment$groups) {
+    labels <- append(labels, group)
+    parents <- append(parents, experiment$name)
+    values <- append(values, count_group_values(experiment, group))
+  }
+
+  for (group in experiment$groups) { # within every experimental group
+    for (animal in experiment$animals) { # check each animal
+      animal_count <- 0
+      for (dataset in 1:length(experiment$experimental_data)) { # if the group has that animal
+        if (experiment$experimental_data[dataset]$call_data$group == group &
+            experiment$experimental_data[dataset]$call_data$animal == animal) {
+          animal_count <- animal_count + 1 # add 1 to the count
+        }
+      }
+      if (animal_count > 0) {
+        labels <- append(labels, animal)
+        parents <- append(parents, group)
+        values <- append(values, animal_count)
+      }
+
+    }
+  }
+
+  figure <- plot_ly(
+    labels = ~labels,
+    parents = ~parents,
+    values = ~values,
+    type = 'sunburst',
+    branchvalues = 'total'
+  )
+
+  figure
+}
+
+#' @title Sunburst Plot for Experimenter Distribution
+#'
+#' @description Plots interactive sunburst plot for experimenter distribution across
+#' experimental groups. Currently only valid for between-groups studies.
+#'
+#' @param experiment The experiment object
+#'
+#' @return Sunburst distribution plotting experimenter contribution
+#'
+#' @examples \dontrun{plotSunburstExperimenters(experiment = experiment)}
+#'
+#' @importFrom plotly plot_ly
+#' @export
+plotSunburstExperimenters <- function(experiment) {
+  labels <- c()
+  parents <- c()
+  values <- c()
+
+  for (experimenter in experiment$experimenters) {
+    labels <- append(labels, experimenter)
+    parents <- append(parents, experiment$name)
+    values <- append(values, count_exptr_values(experiment, experimenter))
+  }
+
+  figure <- plot_ly(
+    labels = ~labels,
+    parents = ~parents,
+    values = ~values,
+    type = 'sunburst',
+    branchvalues = 'total'
+  )
+
+  figure
+}
+
+
+
+
+

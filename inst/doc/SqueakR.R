@@ -35,6 +35,8 @@ tail(my_new_data)
 ## ----scored data--------------------------------------------------------------
 my_scored_data <- score_timepoint_data(data_subset = my_new_data,
                                     group = "Control",
+                                    id = "my_data.xlsx",
+                                    animal = "3330",
                                     experimenter = "my_name")
 str(my_scored_data)
 
@@ -55,10 +57,19 @@ experiment <- update_experiment(experiment = experiment)
 #                                save_path = "[put path here]")
 
 ## ----semi-automatic pipeline, eval=FALSE, echo=FALSE--------------------------
-#  my_semi_automaticaly_loaded_experiment <- semisqueakRpipeline()
+#  my_semi_automatically_loaded_experiment <- semisqueakRpipeline()
 
 ## ----automatic pipeline, eval = FALSE, echo = FALSE---------------------------
 #  my_automatically_loaded_experiment <- autosqueakRpipeline()
+
+## ----unblind entire dataset---------------------------------------------------
+unblind_all_ids(experiment)
+
+## ----finding the id for a particular filename---------------------------------
+unblind_data_id(experiment, "my_data.xlsx")
+
+## ----finding the name of an anonymized dataset--------------------------------
+unblind_data_name(experiment, 1)
 
 ## ----view raw data from experiment--------------------------------------------
 experiment$experimental_data[1]$call_data$raw
@@ -74,6 +85,21 @@ plotEthnogram(experiment$experimental_data[1]$call_data$raw,
 ## ----tonality ethnogram, warning = FALSE--------------------------------------
 plotEthnogramSplitByTonality(experiment$experimental_data[1]$call_data$raw,
               graph_title = "My Tonality-Split Ethnogram")
+
+## ----3D cluster plots, warning = FALSE----------------------------------------
+plotClusters(experiment$experimental_data[1]$call_data$raw)
+
+## ----surface plot-------------------------------------------------------------
+plotSurface(experiment$experimental_data[1]$call_data$raw)
+
+## ----2d contour plot----------------------------------------------------------
+plotContours
+
+## ----plot animal distributions------------------------------------------------
+plotSunburstAnimals(experiment)
+
+## ----plot experimenter distributions------------------------------------------
+plotSunburstExperimenters(experiment)
 
 ## ----frequency stacked, warning = FALSE---------------------------------------
 plotDensityStackedByFrequency(experiment$experimental_data[1]$call_data$raw)
@@ -109,13 +135,19 @@ plotCorrelations(experiment$experimental_data[1]$call_data$raw)
 ## ----preview excel file (1)---------------------------------------------------
 plotDensityStackedByFrequency("../inst/extdata/Example_Mouse_Data.xlsx")
 
-## ----preview excel file (2), warning=FALSE------------------------------------
+## ----preview excel file as PDF (2), warning=FALSE-----------------------------
 plotSummaryPDF("../inst/extdata/Example_Mouse_Data.xlsx", save_path = tempdir())
+
+## ----preview experiment dataset as PDF, warning=FALSE-------------------------
+plotSummaryPDF(experiment$experimental_data[1]$call_data$raw, save_path = tempdir())
 
 ## ----adding new data----------------------------------------------------------
 additional_data <- add_timepoint_data(data_path = "../inst/extdata/Example_Mouse_Data.xlsx", t1 = 30, t2 = 50)
 
-additional_data <- score_timepoint_data(data_subset = additional_data, group = "Drug",
+additional_data <- score_timepoint_data(data_subset = additional_data,
+                                        group = "AB",
+                                        id = "Example_Mouse_Data2.xlsx",
+                                        animal = "2173",
                                         experimenter = "new_experimenter")
 
 experiment <- add_to_experiment(experiment = experiment, added_data = additional_data)
@@ -126,7 +158,10 @@ describe_experiment(experiment)
 
 ## ----adding one last group----------------------------------------------------
 third_dataset <- add_timepoint_data(data_path = "../inst/extdata/Example_Mouse_Data.xlsx", t1 = 70, t2 = 90)
-third_dataset <- score_timepoint_data(data_subset = third_dataset, group = "Sham",
+third_dataset <- score_timepoint_data(data_subset = third_dataset,
+                                      group = "Sham",
+                                      id = "Example_Mouse_Data3",
+                                      animal = "8072",
                                       experimenter = "experimenter_3")
 
 experiment <- add_to_experiment(experiment = experiment, added_data = third_dataset)
@@ -135,8 +170,17 @@ experiment <- add_to_experiment(experiment = experiment, added_data = third_data
 ## ----inspecting experiment for three groups-----------------------------------
 describe_experiment(experiment)
 
+## ----rechecking animal sunburst-----------------------------------------------
+plotSunburstAnimals(experiment)
+
+## ----rechecking experimenter sunburst-----------------------------------------
+plotSunburstExperimenters(experiment)
+
 ## ----analyze delta frequency between groups-----------------------------------
 analyze_factor(experiment = experiment, analysis_factor = "delta_frequency")
+
+## ----summarize descriptive statistics of data---------------------------------
+squeakrSummary(experiment)
 
 ## ----anova for delta-frequency------------------------------------------------
 squeakrANOVA(experiment = experiment, analysis_factor = "Delta_Freq")
@@ -144,6 +188,6 @@ squeakrANOVA(experiment = experiment, analysis_factor = "Delta_Freq")
 ## ----anova for call length----------------------------------------------------
 squeakrANOVA(experiment = experiment, analysis_factor = "Call_Length")
 
-## ----SqueakR dashboard, eval = FALSE------------------------------------------
+## ----SqueakR dashboard, eval = FALSE, warning = FALSE-------------------------
 #  squeakRDashboard()
 
